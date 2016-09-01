@@ -1,3 +1,13 @@
+---
+title: "Proteomics Analysis of Smooth Muscle Cell LRP1-/- Mice"
+author: "Will Fondrie"
+date: "August 31, 2016"
+output: html_document
+---
+
+# Setting parameters and loading packages
+
+```{r, warning=F, message=F}
 library(ggplot2)
 library(reshape2)
 library(plyr)
@@ -7,20 +17,22 @@ library(ggrepel)
 library(gplots)
 library(qvalue)
 library(data.table)
+```
 
+
+```{r}
 # Parameters for Analysis
 pValCutoff <- 0.01 # maximum acceptable p-value in our analysis
 fdrCutoff <- 0.05  # maximum acceptable fdr in our analysis
 logRatCutoff <- 1  # minimum log2(fold change) required to be declared significant
 minRep <- 2        # minimum number of replicates quantified per condition
 minPep <- 2        # minimum number of peptides quantified per run
+```
 
+# Import results from MaxQuant
 
-################################################################################
-# Import MaxQuant results ######################################################
-################################################################################
+```{r, warnings = F, message = F}
 prot <- read.delim("data/combined/txt/proteinGroups.txt", stringsAsFactors = F)
-#prot <- read.delim("data/test.txt", stringsAsFactors = F)
 
 # Remove Contaminants and Reverse Sequences
 prot <- prot[!grepl("^(CON_|REV_)", prot$Protein.IDs), ]
@@ -44,11 +56,11 @@ prot <- prot[rowSums(prot[ , ratCols], na.rm = T) > 0, ]
 
 # add a simplified accession column
 prot$accession <- gsub(";.*$","",prot$Protein.IDs)
+```
 
+# KO/wt (H/L) Differential expression
 
-################################################################################
-# H/L Differential Expression ##################################################
-################################################################################
+```{r, warnings = F, message = F}
 # Prepare expression matrix for limma
 qProt <- prot[ , ratCols]
 row.names(qProt) <- prot$accession
@@ -57,7 +69,9 @@ qProt <- as.matrix(log2(qProt))
 # Retrieve names for 3 age groups from column names
 ages <- unique(gsub("_.*$", "",colnames(qProt)))
 
+```
 
+```{r, warning = F, message = F}
 # Emprical Bayes moderated t-test, split by age. -------------------------------
 ### If all were together, only proteins quantified in every age would be analyzed.
 stat <- ldply(ages, function(age) {
@@ -80,8 +94,11 @@ stat <- ldply(ages, function(age) {
                        fdr.ST = fdrST, 
                        n = n[n >= minRep])
     rdat
+    
 })
+```
 
+```{r, warning = F, message = F}
 # Create Pretty Volcano Plots --------------------------------------------------
 vProt <- stat[complete.cases(stat), ]
 vProt$sig <- vProt$fdr.ST <= fdrCutoff & vProt$logFC^2 >= logRatCutoff^2
@@ -97,7 +114,7 @@ volcano <- ggplot(vProt, aes(x=logFC, y=-log10(p.value))) +
     geom_vline(xintercept = c(logRatCutoff, -logRatCutoff), size = 0.5) +
     theme_bw() +
     theme(legend.position="none",
-          text = element_text(size = 8),
+          text = element_text(size = 12),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
@@ -106,16 +123,11 @@ volcano <- ggplot(vProt, aes(x=logFC, y=-log10(p.value))) +
     ylab(expression("-log"[10]~"p-value")) +
     xlim(-6.6,6.6)
 volcano
-ggsave("results/volcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
-ggsave("results/volcano.tiff", width = 70, height = 35, units = "mm")
+```
 
+# Clustering
 
-################################################################################
-# Clustering ###################################################################
-################################################################################
-# > Clustering by PCA and heirarchical clustering to identify if age makes a 
-#   difference.
-
+```{r, warning = F, message = F}
 # PCA --------------------------------------------------------------------------
 # Select proteins quantified in ALL replicates.
 cProt <- qProt[rowSums(is.finite(qProt)) == ncol(qProt), ]
@@ -150,8 +162,9 @@ ggplot(pcaPlot, aes(x = PC1, y = PC2, label = lab)) +
 
 ggsave("results/pca.png", width = 70, height = 60, units = "mm")
 ggsave("results/pca.pdf", width = 70, height = 60, units = "mm")
+```
 
-
+```{r, message = F, warning = F}
 # Heirarchical Clustering and Heatmap ------------------------------------------
 # Create a dataframe for labels and names
 nameDat <- data.frame(colName = colnames(cProt))
@@ -185,10 +198,6 @@ myCols <- colorRampPalette(c("#b2182b",
 b <- c(min(cProt),seq(-3,3, length = 298), max(cProt))
 
 # Make a pretty heatmap
-png(filename = "results/heatmap.png", 
-    width = 87, 
-    height = 174, 
-    units = "mm", res = 300)
 heatmap.2(cProt,
           trace = "none",
           dendrogram = "col",
@@ -204,16 +213,16 @@ heatmap.2(cProt,
           margins = c(6,1),
           srtCol = 45,
           keysize = 1,
-          key.par = list(mar = c(5.5,4,0,4)),
+          key.par = list(mar = c(4,3,0,3)),
           lmat = rbind(c(0,4),c(0,1),c(3,2),c(0,5)),
           lhei = c(1,0.25,6,1.25),
           labCol = nameDat$colName)
-graphics.off()
 
+```
 
-################################################################################
-# Age Comparisons ##############################################################
-################################################################################
+# Differential expression between ages
+
+```{r, message = F, warning = F}
 # Only want genes quantified in minRep replicates in all age groups
 keepProt <- ddply(stat, "accession", function(prot){
     data.frame(fullReps = (length(prot$n) == 3))
@@ -230,6 +239,9 @@ runDat <- data.frame(name = colnames(fqProt))
 runDat$run <- gsub("^.*\\.", "", runDat$name)
 runAge <- gsub("_.*$", "", runDat$run)
 
+```
+
+```{r, message = F, warning = F}
 # limma ------------------------------------------------------------------------
 design <- model.matrix(~ 0 + runAge)
 fit <- lmFit(fqProt, design)
@@ -247,7 +259,9 @@ anovaTab <- topTable(testFit, number = nrow(fqProt), sort.by = "none", confint =
 anovaTab$F.fdrST <- qvalue(anovaTab$P.Value)$qvalues
 anovaTab$sig <- anovaTab$F.fdrST <= 0.01
 anovaTab$accession <- row.names(anovaTab)
+```
 
+```{r, message = F, warning = F}
 # Age paiwise comparisions
 ageStat <- ldply(1:3, function(contrast) {
     tab <- topTable(testFit, 
@@ -266,10 +280,10 @@ ageStat <- ldply(1:3, function(contrast) {
                p.value = tab$P.Value,
                fdr.BH = tab$adj.P.Val,
                fdr.ST = fdrST)
-    
 })
+```
 
-
+```{r, message = F, warning = F}
 # Make a pretty volcano plot ---------------------------------------------------
 ageStat$sig <- ageStat$fdr.ST <= fdrCutoff & ageStat$logFC^2 >= logRatCutoff^2
 ageStat$contrast <- revalue(ageStat$contrast, c("YvM" = "12d vs 15w",
@@ -287,7 +301,7 @@ ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
     geom_vline(xintercept = c(logRatCutoff, -logRatCutoff), size = 0.5) +
     theme_bw() +
     theme(legend.position="none",
-          text = element_text(size = 8),
+          text = element_text(size = 12),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
@@ -295,15 +309,12 @@ ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
     xlab(expression("Difference of log"[2]~"KO/wt ratios (H/L)")) +    
     ylab(expression("-log"[10]~"p-value")) +
     scale_x_continuous(breaks = c(-4, -2, 0, 2, 4), limits = c(-4.71, 4.71))
-
 ageVolcano
-ggsave("results/ageVolcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
-ggsave("results/ageVolcano.tiff", width = 70, height = 35, units = "mm")
+```
 
+# Create table of protein results
 
-################################################################################
-# Write Tables #################################################################
-################################################################################
+```{r, message = F, warning = F}
 # Protein Table (protTab)
 # - summarize all of the protein level results
 
@@ -349,4 +360,6 @@ names(protTab) <- gsub("\\._"," ", names(protTab))
 names(protTab) <- gsub("CI\\.", "CI-", names(protTab))
 names(protTab) <- gsub("(\\.|_)", " ", names(protTab))
 
-write.table(protTab, "results/proteinTable.txt", sep = "\t", row.names = F, quote = F)
+# Show Resulting Columns
+str(protTab)
+```
