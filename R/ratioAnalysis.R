@@ -148,7 +148,7 @@ ggplot(pcaPlot, aes(x = PC1, y = PC2, label = lab)) +
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"))
 
-ggsave("results/pca.png", width = 70, height = 60, units = "mm")
+ggsave("results/pca.tiff", width = 70, height = 60, units = "mm")
 ggsave("results/pca.pdf", width = 70, height = 60, units = "mm")
 
 

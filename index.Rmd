@@ -2,7 +2,9 @@
 title: "Proteomics Analysis of Smooth Muscle Cell LRP1-/- Mice"
 author: "Will Fondrie"
 date: "August 31, 2016"
-output: html_document
+output: 
+  html_document:
+    toc: true
 ---
 
 # Setting parameters and loading packages
@@ -17,6 +19,7 @@ library(ggrepel)
 library(gplots)
 library(qvalue)
 library(data.table)
+library(devtools)
 ```
 
 
@@ -98,7 +101,7 @@ stat <- ldply(ages, function(age) {
 })
 ```
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, fig.show = "hide"}
 # Create Pretty Volcano Plots --------------------------------------------------
 vProt <- stat[complete.cases(stat), ]
 vProt$sig <- vProt$fdr.ST <= fdrCutoff & vProt$logFC^2 >= logRatCutoff^2
@@ -114,7 +117,7 @@ volcano <- ggplot(vProt, aes(x=logFC, y=-log10(p.value))) +
     geom_vline(xintercept = c(logRatCutoff, -logRatCutoff), size = 0.5) +
     theme_bw() +
     theme(legend.position="none",
-          text = element_text(size = 12),
+          text = element_text(size = 8),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
@@ -123,11 +126,17 @@ volcano <- ggplot(vProt, aes(x=logFC, y=-log10(p.value))) +
     ylab(expression("-log"[10]~"p-value")) +
     xlim(-6.6,6.6)
 volcano
+ggsave("results/volcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
+ggsave("results/volcano.png", width = 70, height = 35, units = "mm")
+
 ```
+
+![Volcano Plot of LRP1 KO/wt Mice](results/volcano.png)
+
 
 # Clustering
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, fig.show = "hide"}
 # PCA --------------------------------------------------------------------------
 # Select proteins quantified in ALL replicates.
 cProt <- qProt[rowSums(is.finite(qProt)) == ncol(qProt), ]
@@ -164,7 +173,10 @@ ggsave("results/pca.png", width = 70, height = 60, units = "mm")
 ggsave("results/pca.pdf", width = 70, height = 60, units = "mm")
 ```
 
-```{r, message = F, warning = F}
+![PCA Plot of Replicates](results/pca.png)
+
+
+```{r, message = F, warning = F, fig.show = "hide"}
 # Heirarchical Clustering and Heatmap ------------------------------------------
 # Create a dataframe for labels and names
 nameDat <- data.frame(colName = colnames(cProt))
@@ -198,6 +210,10 @@ myCols <- colorRampPalette(c("#b2182b",
 b <- c(min(cProt),seq(-3,3, length = 298), max(cProt))
 
 # Make a pretty heatmap
+png(filename = "results/heatmap_lowres.png", 
+    width = 87, 
+    height = 174, 
+    units = "mm", res = 100)
 heatmap.2(cProt,
           trace = "none",
           dendrogram = "col",
@@ -213,12 +229,15 @@ heatmap.2(cProt,
           margins = c(6,1),
           srtCol = 45,
           keysize = 1,
-          key.par = list(mar = c(4,3,0,3)),
+          key.par = list(mar = c(5.5,4,0,4)),
           lmat = rbind(c(0,4),c(0,1),c(3,2),c(0,5)),
           lhei = c(1,0.25,6,1.25),
           labCol = nameDat$colName)
+graphics.off()
 
 ```
+
+![Heatmap of replicates with heirarchical clustering](results/heatmap_lowres.png)
 
 # Differential expression between ages
 
@@ -283,7 +302,7 @@ ageStat <- ldply(1:3, function(contrast) {
 })
 ```
 
-```{r, message = F, warning = F}
+```{r, message = F, warning = F, fig.show = "hide"}
 # Make a pretty volcano plot ---------------------------------------------------
 ageStat$sig <- ageStat$fdr.ST <= fdrCutoff & ageStat$logFC^2 >= logRatCutoff^2
 ageStat$contrast <- revalue(ageStat$contrast, c("YvM" = "12d vs 15w",
@@ -291,6 +310,7 @@ ageStat$contrast <- revalue(ageStat$contrast, c("YvM" = "12d vs 15w",
                                                 "MvO" = "15w vs 1y"))
 maxP <- ddply(ageStat[ageStat$sig, ], "contrast", function(x) {max(x$p.value)})
 names(maxP)[2] <- "cutoff"
+
 
 
 ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
@@ -301,7 +321,7 @@ ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
     geom_vline(xintercept = c(logRatCutoff, -logRatCutoff), size = 0.5) +
     theme_bw() +
     theme(legend.position="none",
-          text = element_text(size = 12),
+          text = element_text(size = 8),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
@@ -309,8 +329,13 @@ ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
     xlab(expression("Difference of log"[2]~"KO/wt ratios (H/L)")) +    
     ylab(expression("-log"[10]~"p-value")) +
     scale_x_continuous(breaks = c(-4, -2, 0, 2, 4), limits = c(-4.71, 4.71))
+
 ageVolcano
+ggsave("results/ageVolcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
+ggsave("results/ageVolcano.png", width = 70, height = 35, units = "mm")
 ```
+
+![Volcano plot of age differences](results/ageVolcano.png)
 
 # Create table of protein results
 
@@ -360,6 +385,16 @@ names(protTab) <- gsub("\\._"," ", names(protTab))
 names(protTab) <- gsub("CI\\.", "CI-", names(protTab))
 names(protTab) <- gsub("(\\.|_)", " ", names(protTab))
 
+write.table(protTab, "results/proteinTable.txt", sep = "\t", row.names = F, quote = F)
+
 # Show Resulting Columns
 str(protTab)
+
+```
+
+
+# Session Info
+
+```{r}
+session_info()
 ```
