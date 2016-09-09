@@ -353,12 +353,3 @@ names(protTab) <- gsub("CI\\.", "CI-", names(protTab))
 names(protTab) <- gsub("(\\.|_)", " ", names(protTab))
 
 write.table(protTab, "results/proteinTable.txt", sep = "\t", row.names = F, quote = F)
-
-
-tgfb2 <- protTab$accession[grep("Tgfb2", protTab[ , "Gene names"])]
-tgfb2Row <- stat[stat$accession == tgfb2, ]
-
-ggplot(tgfb2Row, aes(x = age, y = logFC)) +
-  geom_bar(stat = "identity", fill = "white", color = "black", size = 1) +
-  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 1) + 
-  geom_hline(yintercept = 0, color = "black", size = 1)

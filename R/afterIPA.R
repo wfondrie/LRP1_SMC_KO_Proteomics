@@ -5,12 +5,20 @@ library(qvalue)
 load("temp/protTab.rda")
 load("temp/stat.rda")
 
+# Theme for ggplot2 bar plots
+mytheme <- theme_bw()+
+           theme(legend.key = element_blank(),
+                 legend.key.size = unit(0.5, "lines"),
+                 text = element_text(size = 8),
+                 panel.grid.major = element_blank(),
+                 panel.grid.minor = element_blank(),
+                 panel.border = element_rect(color = "black"))
 
 
 # Proteins ---------------------------------------------------------------------
 files <- list.files("data/IPA", full.names = T)
-smadFiles <- grep("smad", files, value = T)
-tgfbFiles <- grep("tgfb2", files, value = T)
+smadFiles <- grep("smad[37]", files, value = T)
+tgfbFiles <- grep("tgfb", files, value = T)
 
 
 
@@ -52,9 +60,8 @@ mergeTables <- function(df) {
 smadTab <- mergeTables(smad)
 tgfbTab <- mergeTables(tgfb)
 
-a <- ddply(smadTab, c("accession"), function(x) nrow(x)/3)
-b <- ddply(tgfbTab, c("accession"), function(x) nrow(x)/3)
-
+write.table(smadTab, "temp/smadTab.txt", sep = "\t", quote = F, row.names = F)
+write.table(tgfbTab, "temp/tgfbTab.txt", sep = "\t", quote = F, row.names = F)
 
 # Regulators -------------------------------------------------------------------
 regs <- read.delim("data/IPA/upReg.txt", skip = 1, stringsAsFactors = F)
@@ -74,13 +81,7 @@ tgfbRegT <- meltRegs(tgfbRegs)
 tgfbRegT$z.score <- as.numeric(tgfbRegT$z.score)
 ggplot(tgfbRegT, aes(x = Upstream.regulators, y = z.score, fill = age)) +
   geom_bar(stat = "identity", position = "dodge", color = "black") +
-  theme_bw()+
-  theme(legend.key = element_blank(),
-        legend.key.size = unit(0.5, "lines"),
-        text = element_text(size = 8),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_rect(color = "black")) +
+  mytheme +
   geom_hline(yintercept = 0, size = 0.5, color = "black") +
   ylab("Activation Z-Score") +
   xlab("Upstream Regulator")
@@ -93,16 +94,35 @@ smadRegT$z.score <- as.numeric(smadRegT$z.score)
 
 ggplot(smadRegT, aes(x = Upstream.regulators, y = z.score, fill = age)) +
   geom_bar(stat = "identity", position = "dodge", color = "black") +
-  theme_bw()+
-  theme(legend.key = element_blank(),
-        legend.key.size = unit(0.5, "lines"),
-        text = element_text(size = 8),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_rect(color = "black")) +
+  mytheme +
   geom_hline(yintercept = 0, size = 0.5, color = "black") +
   ylab("Activation Z-Score") +
   xlab("Upstream Regulator")
 
 ggsave("results/smadRegs.pdf", width = 50, height = 35, units = "mm", useDingbats = F)
 ggsave("results/smadRegs.tiff", width = 50, height = 35, units = "mm")
+
+# TGFB2 Plot -------------------------------------------------------------------
+
+tgfb2 <- protTab$accession[grep("Tgfb2", protTab[ , "Gene.names"])]
+tgfb2Row <- stat[stat$accession == tgfb2, ]
+
+ggplot(tgfb2Row, aes(x = contrast, y = logFC, fill = contrast)) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 0.5) +
+  theme_bw()+
+  theme(legend.position = "none",
+        legend.key = element_blank(),
+        legend.key.size = unit(0.5, "lines"),
+        text = element_text(size = 8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "black")) +
+  ylim(c(-0.65, 2.5)) +
+  ylab(expression("Log"[2]~"KO/wt Ratio")) +
+  xlab("Age")
+
+ggsave("results/tgfb2.pdf", width = 35, height = 35, units = "mm", useDingbats = F)
+ggsave("results/tgfb2.tiff", width = 35, height = 35, units = "mm")
+  
