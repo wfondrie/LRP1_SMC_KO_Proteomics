@@ -300,6 +300,7 @@ ageVolcano
 ggsave("results/ageVolcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
 ggsave("results/ageVolcano.tiff", width = 70, height = 35, units = "mm")
 
+save(stat, file = "temp/stat.rda")
 
 ################################################################################
 # Write Tables #################################################################
@@ -317,6 +318,8 @@ ageTable <- data.frame(dcast(ageStat, accession ~ contrast, value.var = c(cols, 
 ratTable <- data.frame(dcast(stat, accession ~ age, value.var = c(cols, "n")))
 
 protTab <- merge(merge(merge(prot, ratTable, all = T), ageTable, all = T), anovaTab, all = T)
+
+save(protTab, file = "temp/protTab.rda")
 
 # Keep only the columns we're interested in
 keep <- c("accession",
