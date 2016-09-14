@@ -7,10 +7,11 @@ library(ggrepel)
 library(gplots)
 library(qvalue)
 library(data.table)
+set.seed(45681)
 
 # Parameters for Analysis
 pValCutoff <- 0.01 # maximum acceptable p-value in our analysis
-fdrCutoff <- 0.05  # maximum acceptable fdr in our analysis
+fdrCutoff <- 0.10  # maximum acceptable fdr in our analysis
 logRatCutoff <- 1  # minimum log2(fold change) required to be declared significant
 minRep <- 2        # minimum number of replicates quantified per condition
 minPep <- 2        # minimum number of peptides quantified per run
@@ -19,7 +20,7 @@ minPep <- 2        # minimum number of peptides quantified per run
 ################################################################################
 # Import MaxQuant results ######################################################
 ################################################################################
-prot <- read.delim("data/combined/txt/proteinGroups.txt", stringsAsFactors = F)
+prot <- read.delim("data/combined/txt.old/proteinGroups.txt", stringsAsFactors = F)
 #prot <- read.delim("data/test.txt", stringsAsFactors = F)
 
 # Remove Contaminants and Reverse Sequences
@@ -110,6 +111,40 @@ ggsave("results/volcano.pdf", width = 70, height = 35, units = "mm", useDingbats
 ggsave("results/volcano.tiff", width = 70, height = 35, units = "mm")
 
 
+
+# Data needed for Venn Diagram
+total <- length(unique(vProt$accession[vProt$sig]))
+sig12d <- vProt[vProt$age == "12d" & vProt$sig, ]
+sig15w <- vProt[vProt$age == "15w" & vProt$sig, ]
+sig1y <- vProt[vProt$age == "1y" & vProt$sig, ]
+
+allShared <- length(unique(vProt$accession[
+  (vProt$accession %in% sig12d$accession) &
+  (vProt$accession %in% sig15w$accession) &
+  (vProt$accession %in% sig1y$accession)
+]))
+
+btw12d15w <- length(sig12d$accession[sig12d$accession %in% sig15w$accession]) - allShared
+btw12d1y <- length(sig12d$accession[sig12d$accession %in% sig1y$accession]) - allShared
+btw15w1y <- length(sig12d$accession[sig15w$accession %in% sig1y$accession]) - allShared
+
+only12d <- nrow(sig12d) - (btw12d1y + btw12d15w + allShared)
+only15w <- nrow(sig15w) - (btw12d15w + btw15w1y + allShared)
+only1y <- nrow(sig1y) - (btw12d1y + btw15w1y + allShared)
+
+vennDat <- data.frame(total = total,
+                      sig12d = nrow(sig12d),
+                      sig15w = nrow(sig15w),
+                      sig1y = nrow(sig1y),
+                      allShared = allShared,
+                      shared_12d_15w = btw12d15w,
+                      shared_12d_1y = btw12d1y,
+                      shared_15w_1y = btw15w1y,
+                      only12d = only12d,
+                      only15w = only15w,
+                      only1y = only1y)
+vennDat$sanityCheck <- sum(vennDat[1, 5:ncol(vennDat)])
+
 ################################################################################
 # Clustering ###################################################################
 ################################################################################
@@ -122,6 +157,7 @@ cProt <- qProt[rowSums(is.finite(qProt)) == ncol(qProt), ]
 
 # Calculate and extract principal components.
 comps <- prcomp(cProt)
+compVar <- summary(comps)$importance[2, ]
 pcaPlot <- data.frame(comps$rotation)
 
 # Rename columns so they look pretty as labels
@@ -146,10 +182,12 @@ ggplot(pcaPlot, aes(x = PC1, y = PC2, label = lab)) +
           text = element_text(size = 8),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          panel.border = element_rect(color = "black"))
+          panel.border = element_rect(color = "black")) +
+    xlab(paste0("PC 1 (", round(compVar[1], 2),"%)")) +
+    ylab(paste0("PC 2 (", round(compVar[2], 2),"%)"))
 
 ggsave("results/pca.tiff", width = 70, height = 60, units = "mm")
-ggsave("results/pca.pdf", width = 70, height = 60, units = "mm")
+ggsave("results/pca.pdf", width = 70, height = 60, units = "mm", useDingbats = F)
 
 
 # Heirarchical Clustering and Heatmap ------------------------------------------
@@ -179,16 +217,16 @@ myCols <- colorRampPalette(c("#b2182b",
                              "#d1e5f0",
                              "#92c5de",
                              "#4393c3",
-                             "#2166ac"))(n=299)
+                             "#2166ac"))(n=64)
 
 # Change gradient scale to highligh biologically significant changes.
-b <- c(min(cProt),seq(-3,3, length = 298), max(cProt))
+b <- c(min(cProt),seq(-3,3, length = 63), max(cProt))
 
 # Make a pretty heatmap
-png(filename = "results/heatmap.png", 
-    width = 87, 
-    height = 174, 
-    units = "mm", res = 300)
+pdf(file = "results/heatmap.pdf", 
+    width = 50 * 0.0392701, 
+    height = 100 * 0.0392701, 
+    useDingbats = F)
 heatmap.2(cProt,
           trace = "none",
           dendrogram = "col",
@@ -201,12 +239,13 @@ heatmap.2(cProt,
           key.title = "",
           key.xlab = expression("Log"[2]~"KO/wt Ratio (H/L)"),
           ColSideColors = nameDat$color,
-          margins = c(6,1),
+          margins = c(4,1),
           srtCol = 45,
+          cexCol = 0.85,
           keysize = 1,
-          key.par = list(mar = c(5.5,4,0,4)),
+          key.par = list(mar = c(5.5,2,0,2)),
           lmat = rbind(c(0,4),c(0,1),c(3,2),c(0,5)),
-          lhei = c(1,0.25,6,1.25),
+          lhei = c(1,0.25,3,1.25),
           labCol = nameDat$colName)
 graphics.off()
 
@@ -300,7 +339,45 @@ ageVolcano
 ggsave("results/ageVolcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
 ggsave("results/ageVolcano.tiff", width = 70, height = 35, units = "mm")
 
+# Save statistics data for after IPA
 save(stat, file = "temp/stat.rda")
+
+
+# Data needed for Venn Diagram -------------------------------------------------
+total <- length(unique(ageStat$accession[ageStat$sig]))
+comp1 <- ageStat[ageStat$contrast == "12d vs 15w" & ageStat$sig, ]
+comp2 <- ageStat[ageStat$contrast == "12d vs 1y" & ageStat$sig, ]
+comp3 <- ageStat[ageStat$contrast == "15w vs 1y" & ageStat$sig, ]
+
+allShared <- length(unique(ageStat$accession[
+  (ageStat$accession %in% comp1$accession) &
+  (ageStat$accession %in% comp2$accession) &
+  (ageStat$accession %in% comp3$accession)
+]))
+
+btw12 <- length(comp1$accession[comp1$accession %in% comp2$accession]) - allShared
+btw13 <- length(comp1$accession[comp1$accession %in% comp3$accession]) - allShared
+btw23 <- length(comp2$accession[comp2$accession %in% comp3$accession]) - allShared
+
+only1 <- nrow(comp1) - (btw12 + btw13 + allShared)
+only2 <- nrow(comp2) - (btw12 + btw23 + allShared)
+only3 <- nrow(comp3) - (btw13 + btw23 + allShared)
+
+vennDatAge <- data.frame(total = total,
+                         allShared = allShared,
+                         shared_comp1_comp2 = btw12,
+                         shared_comp1_comp3 = btw13,
+                         shared_comp2_comp3 = btw23,
+                         only_comp1 = only1,
+                         only_comp2 = only2,
+                         only_comp3 = only3)
+vennDatAge$sanityCheck <- sum(vennDatAge[1, 2:ncol(vennDatAge)])
+
+middle <- ageStat[
+  (ageStat$accession %in% comp1$accession) &
+  (ageStat$accession %in% comp2$accession) &
+  (ageStat$accession %in% comp3$accession),
+]
 
 ################################################################################
 # Write Tables #################################################################

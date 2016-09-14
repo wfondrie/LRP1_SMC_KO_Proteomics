@@ -12,7 +12,8 @@ mytheme <- theme_bw()+
                  text = element_text(size = 8),
                  panel.grid.major = element_blank(),
                  panel.grid.minor = element_blank(),
-                 panel.border = element_rect(color = "black"))
+                 panel.border = element_rect(color = "black"),
+                 legend.title = element_blank())
 
 
 # Proteins ---------------------------------------------------------------------
@@ -84,7 +85,7 @@ ggplot(tgfbRegT, aes(x = Upstream.regulators, y = z.score, fill = age)) +
   mytheme +
   geom_hline(yintercept = 0, size = 0.5, color = "black") +
   ylab("Activation Z-Score") +
-  xlab("Upstream Regulator")
+  xlab("Upstream Regulator") + 
 
 ggsave("results/tgfbRegs.pdf", width = 60, height = 35, units = "mm", useDingbats = F)
 ggsave("results/tgfbRegs.tiff", width = 60, height = 35, units = "mm")
@@ -107,7 +108,7 @@ ggsave("results/smadRegs.tiff", width = 50, height = 35, units = "mm")
 tgfb2 <- protTab$accession[grep("Tgfb2", protTab[ , "Gene.names"])]
 tgfb2Row <- stat[stat$accession == tgfb2, ]
 
-ggplot(tgfb2Row, aes(x = contrast, y = logFC, fill = contrast)) +
+ggplot(tgfb2Row, aes(x = age, y = logFC, fill = age)) +
   geom_bar(stat = "identity", color = "black") +
   geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
   geom_hline(yintercept = 0, color = "black", size = 0.5) +
@@ -121,8 +122,7 @@ ggplot(tgfb2Row, aes(x = contrast, y = logFC, fill = contrast)) +
         panel.border = element_rect(color = "black")) +
   ylim(c(-0.65, 2.5)) +
   ylab(expression("Log"[2]~"KO/wt Ratio")) +
-  xlab("Age")
+  xlab("TGFB2")
 
 ggsave("results/tgfb2.pdf", width = 35, height = 35, units = "mm", useDingbats = F)
 ggsave("results/tgfb2.tiff", width = 35, height = 35, units = "mm")
-  
