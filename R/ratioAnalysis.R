@@ -112,7 +112,7 @@ ggsave("results/volcano.tiff", width = 70, height = 35, units = "mm")
 
 
 
-# Data needed for Venn Diagram
+# Data needed for Venn Diagram -------------------------------------------------
 total <- length(unique(vProt$accession[vProt$sig]))
 sig12d <- vProt[vProt$age == "12d" & vProt$sig, ]
 sig15w <- vProt[vProt$age == "15w" & vProt$sig, ]
@@ -183,8 +183,8 @@ ggplot(pcaPlot, aes(x = PC1, y = PC2, label = lab)) +
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black")) +
-    xlab(paste0("PC 1 (", round(compVar[1], 2),"%)")) +
-    ylab(paste0("PC 2 (", round(compVar[2], 2),"%)"))
+    xlab(paste0("PC 1 (", round(compVar[1]*100, 0),"%)")) +
+    ylab(paste0("PC 2 (", round(compVar[2]*100, 0),"%)"))
 
 ggsave("results/pca.tiff", width = 70, height = 60, units = "mm")
 ggsave("results/pca.pdf", width = 70, height = 60, units = "mm", useDingbats = F)
