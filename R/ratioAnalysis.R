@@ -20,11 +20,15 @@ minPep <- 2        # minimum number of peptides quantified per run
 ################################################################################
 # Import MaxQuant results ######################################################
 ################################################################################
-prot <- read.delim("data/combined/txt.old/proteinGroups.txt", stringsAsFactors = F)
+prot <- read.delim("data/combined/txt/proteinGroups.txt", stringsAsFactors = F)
 #prot <- read.delim("data/test.txt", stringsAsFactors = F)
 
 # Remove Contaminants and Reverse Sequences
 prot <- prot[!grepl("^(CON_|REV_)", prot$Protein.IDs), ]
+
+# Need to rename columns to account for the bad 1y replicate that was thrown out
+names(prot) <- gsub("1y_3", "1y_2", names(prot))
+names(prot) <- gsub("1y_4", "1y_3", names(prot))
 
 # Choose quantification columns
 ratCols <- grep("^Ratio.H.L.normalized.1", names(prot), value = T)
