@@ -246,56 +246,24 @@ ltbp2Row <- stat[stat$accession == ltbp2, ]
 ltbp4 <- protTab$accession[grep("Ltbp4", protTab[ , "Gene.names"])]
 ltbp4Row <- stat[stat$accession == ltbp4[2], ]
 
-ltbp <- rbind(ltbp2Row, ltbp4Row)
-ltbp$lab <- c(rep("LTBP2",3), rep("LTBP4",3))
+ltbp <- rbind(tgfb2Row, ltbp2Row, ltbp4Row)
+ltbp$lab <- factor(c(rep("Tgfb2",3), rep("Ltbp2",3), rep("Ltbp4",3)), 
+                   levels = c("Tgfb2", "Ltbp2", "Ltbp4"))
 
-ggplot(ltbp, aes(x = age, y = logFC, fill = age)) +
-  geom_bar(stat = "identity", color = "black", width = 0.7) +
-  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
+dodge <- position_dodge(width=0.7)
+ggplot(ltbp, aes(x = lab, y = logFC, fill = age)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7, position = dodge) +
+  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5, position = dodge) + 
   geom_hline(yintercept = 0, color = "black", size = 0.5) +
-  theme_bw()+
-  theme(legend.position = "none",
-        legend.key = element_blank(),
-        legend.key.size = unit(0.5, "lines"),
-        text = element_text(size = 8),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_rect(color = "black")) +
-  ylim(c(-1.3, 3)) +
+  mytheme +
+  #ylim(c(-3.5, 8)) +
   ylab(expression("Log"[2]~"KO/wt Ratio")) +
-  xlab("Age") +
-  facet_grid(. ~ lab)
+  xlab("Protein") +
+  theme(axis.title.x = element_blank())
 
 ggsave("results/ltbp.pdf", width = 60, height = 40, units = "mm", useDingbats = F)
 ggsave("results/ltbp.tiff", width = 60, height = 40, units = "mm")
 
-
-# From Previous Studies --------------------------------------------------------
-# LRP1, CTGF and HTRA1
-
-prots <- protTab$accession[grep("(Lrp1|Htra1|Ctgf)", protTab[ , "Gene.names"])]
-protRow <- stat[stat$accession %in% prots, ]
-protRow$accession <- factor(protRow$accession)
-protRow$lab <- mapvalues(protRow$accession, from = prots, to = c("LRP1", "CTGF", "HTRA1"))
-
-ggplot(protRow, aes(x = age, y = logFC, fill = age)) +
-  geom_bar(stat = "identity", color = "black", width = 0.7) +
-  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
-  geom_hline(yintercept = 0, color = "black", size = 0.5) +
-  theme_bw()+
-  theme(legend.position = "none",
-        legend.key = element_blank(),
-        legend.key.size = unit(0.5, "lines"),
-        text = element_text(size = 8),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_rect(color = "black")) +
-  #ylim(c(-1.3, 3)) +
-  ylab(expression("Log"[2]~"KO/wt Ratio")) +
-  xlab("Age")
-
-ggsave("results/ConfirmPrev.pdf", width = 60, height = 40, units = "mm", useDingbats = F)
-ggsave("results/ConfirmPrev.tiff", width = 60, height = 40, units = "mm")
 
 # Differentially expressed in all heatmap --------------------------------------
 protTab2 <- ddply(protTab, "accession", function(p) {
@@ -316,11 +284,11 @@ allSig$gn <- mapvalues(allSig$accession,
 write.table(protTab2, file = "temp/alldiff.txt", sep = "\t", row.names = F, quote = F)
 
 # Categories
-protease <- c("A0A0R4J0I9","Q3TX21", "Q54AE5", "Q8R054", "Q9R118")
+protease <- c("A0A0R4J0I9", "Q54AE5", "Q8R054", "Q9R118")
 stressResponse <- c("A2A813", "P08228", "A0A0R4J139")
 glycan <- c("A6H6K1", "A6MDD3", "Q8C253", "Q9CQ60", "Q9R045", "Q60675")
 nucMet <- c("P08030", "Q4FK28", "Q9R0Y5")
-signaling <- c("P29268", "Q5EBQ2", "Q9JJU8")
+signaling <- c("P29268","Q3TX21", "Q5EBQ2", "Q9JJU8")
 cytoSkel <- c("Q4FK36", "Q9CRB6")
 
 # Proteases
@@ -330,9 +298,12 @@ ggplot(allSig[allSig$accession %in% protease, ], aes(x = gn, y = logFC, fill = a
     geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5, position = dodge) + 
     geom_hline(yintercept = 0, color = "black", size = 0.5) +
     mytheme +
-    ylim(c(-3.5, 8)) +
+    #ylim(c(-3.5, )) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
-    xlab("Protein")
+    xlab("Protein") +
+    theme(axis.title.x = element_blank())
+
+ggsave("results/proteaseBar.pdf", height = 60, width = 100, units = "mm", useDingbats = F)
 
 # Stress Response
 ggplot(allSig[allSig$accession %in% stressResponse, ], aes(x = gn, y = logFC, fill = age)) +
@@ -340,9 +311,12 @@ ggplot(allSig[allSig$accession %in% stressResponse, ], aes(x = gn, y = logFC, fi
     geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5, position = dodge) + 
     geom_hline(yintercept = 0, color = "black", size = 0.5) +
     mytheme +
-    ylim(c(-3.5, 0)) +
+    ylim(c(-3.75, 0)) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
-    xlab("Protein")
+    xlab("Protein") +
+    theme(axis.title.x = element_blank())
+
+ggsave("results/stressBar.pdf", height = 30, width = 80, units = "mm", useDingbats = F)
 
 # Glycans and ECM
 ggplot(allSig[allSig$accession %in% glycan, ], aes(x = gn, y = logFC, fill = age)) +
@@ -350,9 +324,12 @@ ggplot(allSig[allSig$accession %in% glycan, ], aes(x = gn, y = logFC, fill = age
     geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5, position = dodge) + 
     geom_hline(yintercept = 0, color = "black", size = 0.5) +
     mytheme +
-    ylim(c(-2.5, 3.5)) +
+    ylim(c(-2.5, 3.75)) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
-    xlab("Protein")
+    xlab("Protein") +
+    theme(axis.title.x = element_blank())
+
+ggsave("results/ecmBar.pdf", height = 60, width = 150, units = "mm", useDingbats = F)
 
 # Nucleotide Metabolism
 ggplot(allSig[allSig$accession %in% nucMet, ], aes(x = gn, y = logFC, fill = age)) +
@@ -362,7 +339,10 @@ ggplot(allSig[allSig$accession %in% nucMet, ], aes(x = gn, y = logFC, fill = age
     mytheme +
     ylim(c(-3.25, 0)) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
-    xlab("Protein")
+    xlab("Protein") +
+    theme(axis.title.x = element_blank())
+
+ggsave("results/nucleotideBar.pdf", height = 30, width = 80, units = "mm", useDingbats = F)
 
 # Signaling
 ggplot(allSig[allSig$accession %in% signaling, ], aes(x = gn, y = logFC, fill = age)) +
@@ -370,9 +350,12 @@ ggplot(allSig[allSig$accession %in% signaling, ], aes(x = gn, y = logFC, fill = 
     geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5, position = dodge) + 
     geom_hline(yintercept = 0, color = "black", size = 0.5) +
     mytheme +
-    ylim(c(-3.25, 4)) +
+    ylim(c(-3.25, 8)) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
-    xlab("Protein")
+    xlab("Protein") +
+    theme(axis.title.x = element_blank())
+
+ggsave("results/signalingBar.pdf", height = 60, width = 100, units = "mm", useDingbats = F)
 
 # Cytoskeleton
 ggplot(allSig[allSig$accession %in% cytoSkel, ], aes(x = gn, y = logFC, fill = age)) +
@@ -380,6 +363,9 @@ ggplot(allSig[allSig$accession %in% cytoSkel, ], aes(x = gn, y = logFC, fill = a
     geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5, position = dodge) + 
     geom_hline(yintercept = 0, color = "black", size = 0.5) +
     mytheme +
-    ylim(c(-4.5, 0)) +
+    ylim(c(-5, 0)) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
-    xlab("Protein")
+    xlab("Protein") +
+    theme(axis.title.x = element_blank())
+
+ggsave("results/cytoBar.pdf", height = 30, width = 60, units = "mm", useDingbats = F)
