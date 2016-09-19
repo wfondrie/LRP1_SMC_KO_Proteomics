@@ -4,6 +4,9 @@ library(plyr)
 library(qvalue)
 set.seed(15678563)
 
+fdrCutoff <- 0.10  # maximum acceptable fdr in our analysis
+logRatCutoff <- 1  # minimum log2(fold change) required to be declared significant
+
 ################################################################################
 # Set up #######################################################################
 ################################################################################
@@ -14,12 +17,14 @@ load("temp/stat.rda") # contains some protein info in long format
 
 # Theme for ggplot2 bar plots
 mytheme <- theme_bw()+
-    theme(legend.key = element_blank(),
+    theme(legend.position = "none",
+          legend.key = element_blank(),
           legend.key.size = unit(0.5, "lines"),
           text = element_text(size = 8),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
+          #panel.margin = unit(2, "mm"),
           legend.title = element_blank())
 
 
@@ -30,7 +35,7 @@ mytheme <- theme_bw()+
 # Files were exported from IPA. Each contains the genes in our analysis mapped to
 # upstream regulators (either SMAD or TGFB) 
 files <- list.files("data/IPA", full.names = T)
-smadFiles <- grep("smad[37]", files, value = T) # SMAD3 and SMAD7 are most interesting
+smadFiles <- grep("smad", files, value = T) # SMAD3 and SMAD7 are most interesting
 tgfbFiles <- grep("tgfb", files, value = T)
 
 # Reads IPA-exported file f and cleans columns to only have gene symbol and 
@@ -95,8 +100,8 @@ write.table(tgfbTab, "temp/tgfbTab.txt", sep = "\t", quote = F, row.names = F)
 regs <- read.delim("data/IPA/upReg.txt", skip = 1, stringsAsFactors = F)
 
 # Filter for TGFB and SMAD upstream regulators, specifically
-tgfbRegs <- regs[grep("TGFB[123]", regs$Upstream.regulators), ]
-smadRegs <- regs[grep("^SMAD[37]$", regs$Upstream.regulators), ]
+tgfbRegs <- regs[grep("TGFB[123]$", regs$Upstream.regulators), ]
+smadRegs <- regs[grep("^SMAD[347]$", regs$Upstream.regulators), ]
 
 # Function Takes an upstream regulator list and puts in long format, based on age.
 # Finishes by cleaning up the age column.
@@ -119,41 +124,55 @@ smadRegT$z.score <- as.numeric(smadRegT$z.score)
 # Make pretty plots of Upstream Regulator Z-Scores -----------------------------
 
 # TGFB
-ggplot(tgfbRegT, aes(x = Upstream.regulators, y = z.score, fill = age)) +
-    geom_bar(stat = "identity", position = "dodge", color = "black") +
+lvl <- levels(factor(tgfbRegT$Upstream.regulators))
+annTxt <- data.frame(age = "12d", 
+                     z.score = 0, 
+                     Upstream.regulators = factor("TGFB2", levels = lvl))
+
+ggplot(tgfbRegT, aes(x = age, y = z.score, fill = age)) +
+    geom_bar(stat = "identity", color = "black", width = 0.75) +
     mytheme +
-    geom_hline(yintercept = 0, size = 0.5, color = "black") +
+    geom_hline(yintercept = 0, size = 0.5, color = "black") + 
+    facet_grid(. ~ Upstream.regulators) +
     ylab("Activation Z-Score") +
-    xlab("Upstream Regulator")
+    xlab("Age") +
+    geom_text(data = annTxt, label = "ND", vjust = -1, size = 2)
     
-ggsave("results/tgfbRegs.pdf", width = 60, height = 35, units = "mm", useDingbats = F)
-ggsave("results/tgfbRegs.tiff", width = 60, height = 35, units = "mm")
+ggsave("results/tgfbRegs.pdf", width = 87, height = 40, units = "mm", useDingbats = F)
+ggsave("results/tgfbRegs.tiff", width = 87, height = 40, units = "mm")
 
 
 # SMAD
-ggplot(smadRegT, aes(x = Upstream.regulators, y = z.score, fill = age)) +
-    geom_bar(stat = "identity", position = "dodge", color = "black") +
+lvl <- levels(factor(smadRegT$Upstream.regulators))
+annTxt <- data.frame(age = "12d", 
+                     z.score = 0, 
+                     Upstream.regulators = factor("SMAD4", levels = lvl))
+
+ggplot(smadRegT, aes(x = age, y = z.score, fill = age)) +
+    geom_bar(stat = "identity", color = "black", width = 0.75) +
     mytheme +
     geom_hline(yintercept = 0, size = 0.5, color = "black") +
+    facet_grid(. ~ Upstream.regulators) +
     ylab("Activation Z-Score") +
-    xlab("Upstream Regulator")
+    xlab("Age") +
+    geom_text(data = annTxt, label = "ND", vjust = -1, size = 2)
 
-ggsave("results/smadRegs.pdf", width = 50, height = 35, units = "mm", useDingbats = F)
-ggsave("results/smadRegs.tiff", width = 50, height = 35, units = "mm")
+ggsave("results/smadRegs.pdf", width = 87, height = 40, units = "mm", useDingbats = F)
+ggsave("results/smadRegs.tiff", width = 87, height = 40, units = "mm")
 
 
 ################################################################################
 # Individual Protein Plots #####################################################
 ################################################################################
 
-# TGFB2 ------------------------------------------------------------------------
+# TGFB2 --------------------------------------------------------------
 # Select TGFB2
 tgfb2 <- protTab$accession[grep("Tgfb2", protTab[ , "Gene.names"])]
 tgfb2Row <- stat[stat$accession == tgfb2, ]
 
 # plot
 ggplot(tgfb2Row, aes(x = age, y = logFC, fill = age)) +
-    geom_bar(stat = "identity", color = "black") +
+    geom_bar(stat = "identity", color = "black", width = 0.7) +
     geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
     geom_hline(yintercept = 0, color = "black", size = 0.5) +
     theme_bw()+
@@ -168,5 +187,133 @@ ggplot(tgfb2Row, aes(x = age, y = logFC, fill = age)) +
     ylab(expression("Log"[2]~"KO/wt Ratio")) +
     xlab("TGFB2")
 
-ggsave("results/tgfb2.pdf", width = 35, height = 35, units = "mm", useDingbats = F)
-ggsave("results/tgfb2.tiff", width = 35, height = 35, units = "mm")
+ggsave("results/tgfb2.pdf", width = 30, height = 40, units = "mm", useDingbats = F)
+ggsave("results/tgfb2.tiff", width = 30, height = 40, units = "mm")
+
+# LTBP2 ------------------------------------------------------------------------
+ltbp2 <- protTab$accession[grep("Ltbp2", protTab[ , "Gene.names"])]
+ltbp2Row <- stat[stat$accession == ltbp2, ]
+
+ggplot(ltbp2Row, aes(x = age, y = logFC, fill = age)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 0.5) +
+  theme_bw()+
+  theme(legend.position = "none",
+        legend.key = element_blank(),
+        legend.key.size = unit(0.5, "lines"),
+        text = element_text(size = 8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "black")) +
+  ylim(c(-0.8, 3)) +
+  ylab(expression("Log"[2]~"KO/wt Ratio")) +
+  xlab("LTBP2")
+
+ggsave("results/ltbp2.pdf", width = 30, height = 40, units = "mm", useDingbats = F)
+ggsave("results/ltbp2.tiff", width = 30, height = 40, units = "mm")
+
+# LTBP4 ------------------------------------------------------------------------
+ltbp4 <- protTab$accession[grep("Ltbp4", protTab[ , "Gene.names"])]
+ltbp4Row <- stat[stat$accession == ltbp4[2], ]
+
+ggplot(ltbp4Row, aes(x = age, y = logFC, fill = age)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 0.5) +
+  theme_bw()+
+  theme(legend.position = "none",
+        legend.key = element_blank(),
+        legend.key.size = unit(0.5, "lines"),
+        text = element_text(size = 8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "black")) +
+  #ylim(c(-0.65, 2.5)) +
+  ylab(expression("Log"[2]~"KO/wt Ratio")) +
+  xlab("LTBP4")
+
+ggsave("results/ltbp4.pdf", width = 30, height = 40, units = "mm", useDingbats = F)
+ggsave("results/ltbp4.tiff", width = 30, height = 40, units = "mm")
+
+################################################################################
+# Panels of Protein Plots ######################################################
+################################################################################
+
+ltbp2 <- protTab$accession[grep("Ltbp2", protTab[ , "Gene.names"])]
+ltbp2Row <- stat[stat$accession == ltbp2, ]
+
+ltbp4 <- protTab$accession[grep("Ltbp4", protTab[ , "Gene.names"])]
+ltbp4Row <- stat[stat$accession == ltbp4[2], ]
+
+ltbp <- rbind(ltbp2Row, ltbp4Row)
+ltbp$lab <- c(rep("LTBP2",3), rep("LTBP4",3))
+
+ggplot(ltbp, aes(x = age, y = logFC, fill = age)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 0.5) +
+  theme_bw()+
+  theme(legend.position = "none",
+        legend.key = element_blank(),
+        legend.key.size = unit(0.5, "lines"),
+        text = element_text(size = 8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "black")) +
+  ylim(c(-1.3, 3)) +
+  ylab(expression("Log"[2]~"KO/wt Ratio")) +
+  xlab("Age") +
+  facet_grid(. ~ lab)
+
+ggsave("results/ltbp.pdf", width = 60, height = 40, units = "mm", useDingbats = F)
+ggsave("results/ltbp.tiff", width = 60, height = 40, units = "mm")
+
+
+# From Previous Studies --------------------------------------------------------
+# LRP1, CTGF and HTRA1
+
+prots <- protTab$accession[grep("(Lrp1|Htra1|Ctgf)", protTab[ , "Gene.names"])]
+protRow <- stat[stat$accession %in% prots, ]
+protRow$accession <- factor(protRow$accession)
+protRow$lab <- mapvalues(protRow$accession, from = prots, to = c("LRP1", "CTGF", "HTRA1"))
+
+ggplot(protRow, aes(x = age, y = logFC, fill = age)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_errorbar(aes(ymin = CI.L, ymax = CI.H), width = .2, size = 0.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 0.5) +
+  theme_bw()+
+  theme(legend.position = "none",
+        legend.key = element_blank(),
+        legend.key.size = unit(0.5, "lines"),
+        text = element_text(size = 8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "black")) +
+  #ylim(c(-1.3, 3)) +
+  ylab(expression("Log"[2]~"KO/wt Ratio")) +
+  xlab("Age") +
+  facet_grid(. ~ lab)
+
+ggsave("results/ConfirmPrev.pdf", width = 60, height = 40, units = "mm", useDingbats = F)
+ggsave("results/ConfirmPrev.tiff", width = 60, height = 40, units = "mm")
+
+# Differentially expressed in all heatmap --------------------------------------
+protTab2 <- ddply(protTab, "accession", function(p) {
+  p$allSig <- all((p$fdr.ST_12d <= fdrCutoff & p$logFC_12d^2 >= logRatCutoff^2),
+                  (p$fdr.ST_15w <= fdrCutoff & p$logFC_15w^2 >= logRatCutoff^2),
+                  (p$fdr.ST_1y <= fdrCutoff & p$logFC_15w^2 >= logRatCutoff^2), 
+                  na.rm = F)
+  return(p)
+})
+
+protTab2 <- protTab2[protTab2$allSig & !is.na(protTab2$allSig), ]
+
+allSig <- stat[stat$accession %in% protTab2$accession, ]
+allSig$gn <- mapvalues(allSig$accession, 
+                       from = protTab2$accession, 
+                       to = protTab2$Gene.names)
+
+ggplot(allSig[allSig$gn != "Cyr61", ], aes(x = age, y = gn, fill = logFC)) + 
+  geom_tile() +
+  scale_fill_gradient2(low = "#b2182b", mid = "white" ,high = "#2166ac")

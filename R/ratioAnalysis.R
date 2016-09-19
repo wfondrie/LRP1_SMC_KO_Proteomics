@@ -20,8 +20,7 @@ minPep <- 2        # minimum number of peptides quantified per run
 ################################################################################
 # Import MaxQuant results ######################################################
 ################################################################################
-prot <- read.delim("data/combined/txt/proteinGroups.txt", stringsAsFactors = F)
-#prot <- read.delim("data/test.txt", stringsAsFactors = F)
+prot <- read.delim("data/proteinGroups.txt", stringsAsFactors = F)
 
 # Remove Contaminants and Reverse Sequences
 prot <- prot[!grepl("^(CON_|REV_)", prot$Protein.IDs), ]
@@ -95,7 +94,7 @@ names(maxP)[2] <- "cutoff"
 
 # make the pretty plot
 volcano <- ggplot(vProt, aes(x=logFC, y=-log10(p.value))) +
-    geom_point(aes(color = sig), size = 0.5) +
+    geom_point(aes(color = sig), size = 0.2) +
     scale_color_manual(values=c("gray","black")) +
     geom_hline(data = maxP,aes(yintercept = -log10(cutoff)), size = 0.5, color="black") +
     facet_grid(. ~ age) +
@@ -107,12 +106,12 @@ volcano <- ggplot(vProt, aes(x=logFC, y=-log10(p.value))) +
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
           strip.background = element_rect(color = "black")) +
-    xlab(expression("Normalized log"[2]~"KO/wt ratio (H/L)")) +
+    xlab(expression("Normalized log"[2]~"KO/wt ratio")) +
     ylab(expression("-log"[10]~"p-value")) +
     xlim(-6.6,6.6)
 volcano
-ggsave("results/volcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
-ggsave("results/volcano.tiff", width = 70, height = 35, units = "mm")
+ggsave("results/volcano.pdf", width = 100, height = 45, units = "mm", useDingbats = F)
+ggsave("results/volcano.tiff", width = 100, height = 45, units = "mm")
 
 
 
@@ -323,7 +322,7 @@ names(maxP)[2] <- "cutoff"
 
 
 ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
-    geom_point(aes(color = sig), size = 0.5) +
+    geom_point(aes(color = sig), size = 0.2) +
     scale_color_manual(values=c("gray","black")) +
     geom_hline(data = maxP,aes(yintercept = -log10(cutoff)), size = 0.5, color="black") +
     facet_grid(~ contrast) +
@@ -335,13 +334,13 @@ ageVolcano <- ggplot(ageStat, aes(x=logFC, y=-log10(p.value))) +
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black"),
           strip.background = element_rect(color = "black")) +
-    xlab(expression("Difference of log"[2]~"KO/wt ratios (H/L)")) +    
+    xlab(expression("Difference of log"[2]~"KO/wt ratios")) +    
     ylab(expression("-log"[10]~"p-value")) +
     scale_x_continuous(breaks = c(-4, -2, 0, 2, 4), limits = c(-4.71, 4.71))
 
 ageVolcano
-ggsave("results/ageVolcano.pdf", width = 70, height = 35, units = "mm", useDingbats = F)
-ggsave("results/ageVolcano.tiff", width = 70, height = 35, units = "mm")
+ggsave("results/ageVolcano.pdf", width = 100, height = 45, units = "mm", useDingbats = F)
+ggsave("results/ageVolcano.tiff", width = 100, height = 45, units = "mm")
 
 # Save statistics data for after IPA
 save(stat, file = "temp/stat.rda")
@@ -399,6 +398,13 @@ ageTable <- data.frame(dcast(ageStat, accession ~ contrast, value.var = c(cols, 
 ratTable <- data.frame(dcast(stat, accession ~ age, value.var = c(cols, "n")))
 
 protTab <- merge(merge(merge(prot, ratTable, all = T), ageTable, all = T), anovaTab, all = T)
+
+
+cond <- any((protTab$fdr.ST_12d <= fdrCutoff & protTab$logFC_12d^2 >= logRatCutoff^2),
+        (protTab$fdr.ST_15d <= fdrCutoff & protTab$logFC_15w^2 >= logRatCutoff^2),
+        (protTab$fdr.ST_1y <= fdrCutoff & protTab$logFC_1y^2 >= logRatCutoff^2),
+        na.rm = T)
+
 
 save(protTab, file = "temp/protTab.rda")
 
