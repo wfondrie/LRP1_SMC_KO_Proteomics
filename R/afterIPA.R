@@ -102,6 +102,7 @@ regs <- read.delim("data/IPA/upReg.txt", skip = 1, stringsAsFactors = F)
 # Filter for TGFB and SMAD upstream regulators, specifically
 tgfbRegs <- regs[grep("TGFB[123]$", regs$Upstream.regulators), ]
 smadRegs <- regs[grep("^SMAD[347]$", regs$Upstream.regulators), ]
+otherRegs <- regs[grep("(PDGF BB|^TP53$|APOE)", regs$Upstream.regulators), ]
 
 # Function Takes an upstream regulator list and puts in long format, based on age.
 # Finishes by cleaning up the age column.
@@ -120,6 +121,9 @@ tgfbRegT$z.score <- as.numeric(tgfbRegT$z.score)
 
 smadRegT <- meltRegs(smadRegs)
 smadRegT$z.score <- as.numeric(smadRegT$z.score)
+
+otherRegT <- meltRegs(otherRegs)
+otherRegT$z.score <- as.numeric(otherRegT$z.score)
 
 # Make pretty plots of Upstream Regulator Z-Scores -----------------------------
 
@@ -159,6 +163,17 @@ ggplot(smadRegT, aes(x = age, y = z.score, fill = age)) +
 
 ggsave("results/smadRegs.pdf", width = 87, height = 40, units = "mm", useDingbats = F)
 ggsave("results/smadRegs.tiff", width = 87, height = 40, units = "mm")
+
+#APOE, PDGF and TP53
+ggplot(otherRegT, aes(x = age, y = z.score, fill = age)) +
+  geom_bar(stat = "identity", color = "black", width = 0.75) +
+  mytheme +
+  geom_hline(yintercept = 0, size = 0.5, color = "black") +
+  facet_grid(. ~ Upstream.regulators) +
+  ylab("Activation Z-Score") +
+  xlab("Age") 
+
+ggsave("results/otherRegs.pdf", width = 87, height = 40, units = "mm", useDingbats = F)
 
 
 ################################################################################

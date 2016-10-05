@@ -149,9 +149,12 @@ vennDat <- data.frame(total = total,
 vennDat$sanityCheck <- sum(vennDat[1, 5:ncol(vennDat)])
 
 # A venn alternative
-shareCols <- grep("shared", names(vennDat))
-shareBar <- melt(vennDat[ , shareCols])
-ggplot(shareBar, aes(x = variable, y = value)) + 
+shareCols <- grepl("(total|sanityCheck|sig)", names(vennDat), ignore.case = T)
+shareBar <- melt(vennDat[ , !shareCols])
+shareBar$value <- shareBar$value/vennDat$total*100
+shareBar$labs <- c("All", "12d & 15w", "12d & 1y", "15w & 1y",
+                   "Only\n12d", "Only\n15w", "Only\n1y")
+ggplot(shareBar, aes(x = labs, y = value)) + 
     geom_bar(stat = "identity") + 
     theme_bw() +
     theme(axis.title.x = element_blank(),
@@ -159,10 +162,10 @@ ggplot(shareBar, aes(x = variable, y = value)) +
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_rect(color = "black")) +
-    scale_y_continuous(name = "Number of Differentially Expressed Proteins",
+    scale_y_continuous(name = "Shared DE Proteins (%)",
                        expand = c(0,0),
-                       limits = c(0, 37))
-ggsave()
+                       limits = c(0, 50))
+ggsave(file = "results/vennBar.pdf", width = 100, height = 45, units = "mm", useDingbats = F)
 
 ################################################################################
 # Clustering ###################################################################
@@ -391,6 +394,25 @@ vennDatAge <- data.frame(total = total,
                          only_comp2 = only2,
                          only_comp3 = only3)
 vennDatAge$sanityCheck <- sum(vennDatAge[1, 2:ncol(vennDatAge)])
+
+# A venn alternative
+shareColsAge <- grep("shared", names(vennDatAge), ignore.case = T)
+shareBarAge <- melt(vennDatAge[ , shareColsAge])
+shareBarAge$labs <- c("All", "Only\n12d & 15w", "Only\n12d & 1y", "Only\n15w & 1y")
+ggplot(shareBarAge, aes(x = variable, y = value)) + 
+  geom_bar(stat = "identity") + 
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        text = element_text(size = 8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(color = "black")) +
+  scale_y_continuous(name = "Number of Shared DE Proteins",
+                     expand = c(0,0),
+                     limits = c(0, 55))
+ggsave(file = "results/vennBarAge.pdf", width = 75, height = 45, units = "mm", useDingbats = F)
+
+
 
 middle <- ageStat[
   (ageStat$accession %in% comp1$accession) &
