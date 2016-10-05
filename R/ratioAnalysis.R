@@ -10,8 +10,8 @@ library(data.table)
 set.seed(45681)
 
 # Parameters for Analysis
-pValCutoff <- 0.01 # maximum acceptable p-value in our analysis
-fdrCutoff <- 0.10  # maximum acceptable fdr in our analysis
+pValCutoff <- 0.05 # maximum acceptable p-value in our analysis
+fdrCutoff <- 0.08  # maximum acceptable fdr in our analysis
 logRatCutoff <- 1  # minimum log2(fold change) required to be declared significant
 minRep <- 2        # minimum number of replicates quantified per condition
 minPep <- 2        # minimum number of peptides quantified per run

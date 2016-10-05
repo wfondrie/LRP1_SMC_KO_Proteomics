@@ -4,7 +4,7 @@ library(plyr)
 library(qvalue)
 set.seed(15678563)
 
-fdrCutoff <- 0.10  # maximum acceptable fdr in our analysis
+fdrCutoff <- 0.08  # maximum acceptable fdr in our analysis
 logRatCutoff <- 1  # minimum log2(fold change) required to be declared significant
 
 ################################################################################
