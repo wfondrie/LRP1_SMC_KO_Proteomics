@@ -148,6 +148,22 @@ vennDat <- data.frame(total = total,
                       only1y = only1y)
 vennDat$sanityCheck <- sum(vennDat[1, 5:ncol(vennDat)])
 
+# A venn alternative
+shareCols <- grep("shared", names(vennDat))
+shareBar <- melt(vennDat[ , shareCols])
+ggplot(shareBar, aes(x = variable, y = value)) + 
+    geom_bar(stat = "identity") + 
+    theme_bw() +
+    theme(axis.title.x = element_blank(),
+          text = element_text(size = 8),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(color = "black")) +
+    scale_y_continuous(name = "Number of Differentially Expressed Proteins",
+                       expand = c(0,0),
+                       limits = c(0, 37))
+ggsave()
+
 ################################################################################
 # Clustering ###################################################################
 ################################################################################
